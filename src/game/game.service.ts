@@ -133,6 +133,10 @@ export class GameService {
       bingoCard.game = game;
 
       await this.bingoCardRepository.save(bingoCard);
+
+      player.cardId = bingoCard.id;
+
+      await this.usuarioRepository.save(player);
     }
   }
 
@@ -162,7 +166,6 @@ export class GameService {
     }
 
     numbers[12] = 0;
-    console.log('Generated Bingo Card:', numbers);
     return numbers;
   }
 
@@ -178,7 +181,7 @@ export class GameService {
   ): Promise<BingoCard | FacUsuarios> {
     const game = await this.gameRepository.findOne({
       where: { id: gameId },
-      relations: ['bingoCards', 'players'], // Incluir tanto las tarjetas de bingo como los jugadores
+      relations: ['players'], // Incluir tanto las tarjetas de bingo como los jugadores
     });
 
     if (!game) {
@@ -200,9 +203,21 @@ export class GameService {
       relations: ['bingoCards'],
     });
 
+    console.log(player);
     console.log(userBingoCard);
 
-    return userBingoCard;
+    const bingoCard = userBingoCard.bingoCards.find(
+      (card) => card.id === player.cardId,
+    );
+
+    if (!bingoCard) {
+      throw new HttpException(
+        'Tarjeta de bingo no encontrada para este usuario',
+        HttpStatus.NOT_FOUND,
+      );
+    }
+
+    return bingoCard;
   }
 
   // Extraer balotas del juego

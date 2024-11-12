@@ -17,8 +17,7 @@ import { FacGame } from './fac-game.entity';
 import { BingoCard } from './dim-bingo.entity';
 
 @Entity()
-@Unique(['usuario', 'game'])
-@Unique(['usuario', 'bingoCards'])
+@Unique(['usuario'])
 export class FacUsuarios {
   @PrimaryGeneratedColumn({ primaryKeyConstraintName: 'fac_usuarios_pkey1' })
   id: number;
@@ -42,6 +41,9 @@ export class FacUsuarios {
   })
   game: FacGame;
 
+  @Column({ nullable: true })
+  cardId: number;
+
   @OneToMany(() => BingoCard, (card) => card.usuario)
   bingoCards: BingoCard[];
 
@@ -62,4 +64,5 @@ export class FacUsuarios {
   @Exclude()
   @UpdateDateColumn()
   updated_at: Date;
+  player: BingoCard;
 }
