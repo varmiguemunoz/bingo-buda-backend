@@ -35,9 +35,60 @@ export class GameService {
     const initialState = new FacGameState();
     initialState.status = 'esperando';
     initialState.game = savedGame;
-    await this.gameRepository.save(initialState);
+    await this.gameStateRepository.save(initialState);
+
+    this.scheduleGameDeletion(savedGame.id, 300000);
 
     return savedGame;
+  }
+
+  // Iniciar el juego ✅
+  async startGame(gameId: number): Promise<FacGame> {
+    const game = await this.gameRepository.findOne({
+      where: { id: gameId },
+      relations: ['players', 'bingoCards', 'balls', 'states'],
+    });
+
+    if (!game)
+      throw new HttpException('Juego no encontrado', HttpStatus.NOT_FOUND);
+
+    game.start_time = new Date();
+    await this.gameRepository.save(game);
+
+    const initialState = new FacGameState();
+    initialState.status = 'en curso';
+    initialState.game = game;
+    await this.gameStateRepository.save(initialState);
+
+    await this.assignBingoCardsToPlayers(game);
+    await this.generateBalls(game);
+
+    this.scheduleGameDeletion(game.id, 300000);
+
+    return game;
+  }
+
+  // Finalizar el juego (esta eliminando a todos los usuarios asociados al juego)❔
+  async endGame(gameId: number): Promise<string> {
+    const game = await this.gameRepository.findOne({
+      where: { id: gameId },
+      relations: ['balls', 'bingoCards', 'states', 'players'],
+    });
+
+    if (!game)
+      throw new HttpException('Juego no encontrado', HttpStatus.NOT_FOUND);
+
+    await this.removePlayersFromGame(game);
+
+    await this.gameStateRepository.delete({ game: game });
+
+    await this.ballRepository.delete({ game: game });
+
+    await this.bingoCardRepository.delete({ game: game });
+
+    await this.gameRepository.delete({ id: gameId });
+
+    return 'El juego ha finalizado';
   }
 
   // Método para que el usuario se una a un juego ✅
@@ -69,6 +120,20 @@ export class GameService {
     });
   }
 
+  // Obtener los usuarios en una partida ✅
+  async getUsersInGame(gameId: number): Promise<FacUsuarios[]> {
+    const game = await this.gameRepository.findOne({
+      where: { id: gameId },
+      relations: ['players'],
+    });
+
+    if (!game) {
+      throw new HttpException('Juego no encontrado', HttpStatus.NOT_FOUND);
+    }
+
+    return game.players;
+  }
+
   // Obtener todos los juegos ✅
   async getAllGames(): Promise<FacGame[]> {
     return await this.gameRepository.find({
@@ -77,28 +142,25 @@ export class GameService {
     });
   }
 
-  // Iniciar el juego❔
-  async startGame(gameId: number): Promise<FacGame> {
-    const game = await this.gameRepository.findOne({
+  // Obtener un juego por su id ✅
+  async getGameById(gameId: number): Promise<FacGame> {
+    return await this.gameRepository.findOne({
       where: { id: gameId },
       relations: ['players', 'bingoCards', 'balls', 'states'],
     });
+  }
 
-    if (!game)
-      throw new HttpException('Juego no encontrado', HttpStatus.NOT_FOUND);
-
-    const initialState = new FacGameState();
-    initialState.status = 'en curso';
-    initialState.game = game;
-    game.start_time = new Date();
-
-    await this.assignBingoCardsToPlayers(game);
-
-    await this.gameStateRepository.save(initialState);
-
-    await this.generateBalls(game);
-
-    return await this.gameRepository.save(game);
+  // Funcion para que el juego se elimine en X segundos ✅
+  private async scheduleGameDeletion(
+    gameId: number,
+    timeout: number,
+  ): Promise<void> {
+    setTimeout(async () => {
+      const game = await this.gameRepository.findOne({ where: { id: gameId } });
+      if (game) {
+        await this.endGame(gameId);
+      }
+    }, timeout);
   }
 
   // Generar balotas del juego ✅
@@ -115,7 +177,7 @@ export class GameService {
     await this.ballRepository.save(balls);
   }
 
-  // Funcion para asignar tarjetas de bingo a los jugadores❔
+  // Funcion para asignar tarjetas de bingo a los jugadores ✅
   private async assignBingoCardsToPlayers(game: FacGame): Promise<void> {
     const players = game.players;
 
@@ -140,7 +202,7 @@ export class GameService {
     }
   }
 
-  // Genera una tarjeta de Bingo aleatoria
+  // Genera una tarjeta de Bingo aleatoria ✅
   private generateRandomBingoCard(): number[] {
     const numbers: number[] = [];
     const ranges = [
@@ -174,21 +236,20 @@ export class GameService {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
-  // Obtener la tarjeta de bingo del usuario
+  // Obtener la tarjeta de bingo del usuario ✅
   async getBingoCard(
     userId: number,
     gameId: number,
   ): Promise<BingoCard | FacUsuarios> {
     const game = await this.gameRepository.findOne({
       where: { id: gameId },
-      relations: ['players'], // Incluir tanto las tarjetas de bingo como los jugadores
+      relations: ['players'],
     });
 
     if (!game) {
       throw new HttpException('Juego no encontrado', HttpStatus.NOT_FOUND);
     }
 
-    // Verificar si el usuario está en los jugadores del juego
     const player = game.players.find((player) => player.id === userId);
 
     if (!player) {
@@ -202,9 +263,6 @@ export class GameService {
       where: { id: userId },
       relations: ['bingoCards'],
     });
-
-    console.log(player);
-    console.log(userBingoCard);
 
     const bingoCard = userBingoCard.bingoCards.find(
       (card) => card.id === player.cardId,
@@ -220,7 +278,7 @@ export class GameService {
     return bingoCard;
   }
 
-  // Extraer balotas del juego
+  // Extraer balotas del juego ✅
   async drawBall(gameId: number): Promise<FacBall> {
     const game = await this.gameRepository.findOne({
       where: { id: gameId },
@@ -251,7 +309,7 @@ export class GameService {
     return drawnBall;
   }
 
-  // Comprobar si un jugador ha ganado
+  // Comprobar si un jugador ha ganado ❔
   async checkBingo(gameId: number, userId: number): Promise<boolean> {
     const game = await this.gameRepository.findOne({
       where: { id: gameId },
@@ -345,33 +403,7 @@ export class GameService {
     return false;
   }
 
-  // Finalizar el juego
-  async endGame(gameId: number): Promise<string> {
-    const game = await this.gameRepository.findOne({
-      where: { id: gameId },
-      relations: ['balls', 'bingoCards', 'states', 'players'],
-    });
-
-    if (!game)
-      throw new HttpException('Juego no encontrado', HttpStatus.NOT_FOUND);
-
-    const initialState = new FacGameState();
-    initialState.status = 'finalizado';
-    initialState.game = game;
-    await this.gameStateRepository.save(initialState);
-
-    await this.ballRepository.delete({ game: game });
-
-    await this.bingoCardRepository.delete({ game: game });
-
-    await this.removePlayersFromGame(game);
-
-    await this.gameRepository.delete({ id: gameId });
-
-    return 'Juego finalizado correctamente';
-  }
-
-  // Si se necesita eliminar a los jugadores asociados del juego
+  // Si se necesita eliminar a los jugadores asociados del juego ✅
   private async removePlayersFromGame(game: FacGame): Promise<void> {
     if (game.players && game.players.length > 0) return;
 

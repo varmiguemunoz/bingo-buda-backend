@@ -12,6 +12,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { GameService } from './game.service';
 import { FacGame } from 'src/entities/fac-game.entity';
 import { FacBall } from 'src/entities/fac-ball.entity';
+import { FacUsuarios } from 'src/entities/fac-usuarios.entity';
 
 @ApiBearerAuth()
 @UseInterceptors(ClassSerializerInterceptor)
@@ -24,6 +25,18 @@ export class GameController {
   @Get()
   async getAllGames(): Promise<FacGame[]> {
     return await this.gameService.getAllGames();
+  }
+
+  // Obtener un juego por su id
+  @Get(':id')
+  async getGameById(@Param('id') gameId: number): Promise<FacGame> {
+    return await this.gameService.getGameById(gameId);
+  }
+
+  // Obtener los usuarios en una partida
+  @Get(':id/users')
+  async getUsersInGame(@Param('id') gameId: number): Promise<FacUsuarios[]> {
+    return await this.gameService.getUsersInGame(gameId);
   }
 
   // Crear un nuevo juego

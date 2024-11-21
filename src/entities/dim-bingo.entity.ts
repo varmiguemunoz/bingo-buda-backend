@@ -7,10 +7,13 @@ export class BingoCard {
   @PrimaryGeneratedColumn({ primaryKeyConstraintName: 'bingo_card_pkey' })
   id: number;
 
-  @ManyToOne(() => FacGame, (game) => game.bingoCards)
+  @ManyToOne(() => FacGame, (game) => game.bingoCards, { onDelete: 'CASCADE' })
   game: FacGame;
 
-  @ManyToOne(() => FacUsuarios, (usuario) => usuario.bingoCards)
+  @ManyToOne(() => FacUsuarios, (usuario) => usuario.bingoCards, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
   usuario: FacUsuarios;
 
   @Column('simple-array')

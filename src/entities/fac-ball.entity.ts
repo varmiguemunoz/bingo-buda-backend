@@ -12,6 +12,6 @@ export class FacBall {
   @Column({ type: 'boolean', default: false })
   drawn: boolean;
 
-  @ManyToOne(() => FacGame, (game) => game.balls)
+  @ManyToOne(() => FacGame, (game) => game.balls, { onDelete: 'CASCADE' })
   game: FacGame;
 }

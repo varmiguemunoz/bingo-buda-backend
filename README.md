@@ -1,34 +1,30 @@
-Game
-  ├── id: number
-  ├── players: Player[]
-  ├── status: string
-  ├── startTime: Date
-  ├── endTime: Date
-  └── cardTemplate: number[][]
+# bingo-buda-backend
 
-Player
-  ├── id: number
-  ├── username: string
-  ├── email: string
-  ├── gameId: number
-  ├── cardId: number
-  └── status: string
+## Description
 
-BingoCard
-  ├── id: number
-  ├── playerId: number
-  ├── numbers: number[][]
-  ├── selectedBalls: number[]
-  └── isBingo: boolean
+Proyecto de prueba tecnica para Sofka U ⚡️
 
-Ball
-  ├── id: number
-  ├── number: number
-  └── isDrawn: boolean
+## Installation
 
-GameState
-  ├── gameId: number
-  ├── round: number
-  ├── ballsDrawn: number[]
-  ├── currentBall: number
-  └── winners: Player[]
+```bash
+$ npm install
+```
+
+## Running the app
+
+```bash
+# development
+$ npm run start
+
+# watch mode
+$ npm run start:dev
+
+# production mode
+$ npm run start:prod
+```
+
+## Faltantes
+
+1. Evitar que al eliminar el juego se eliminen los usuarios asociados.
+
+2. Probar la funcion para comprobar si un jugador ha ganado
