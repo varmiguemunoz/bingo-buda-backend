@@ -12,7 +12,7 @@ export class BingoCard {
 
   @ManyToOne(() => FacUsuarios, (usuario) => usuario.bingoCards, {
     nullable: true,
-    onDelete: 'SET NULL',
+    onDelete: 'RESTRICT',
   })
   usuario: FacUsuarios;
 

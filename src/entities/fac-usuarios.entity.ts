@@ -32,7 +32,7 @@ export class FacUsuarios {
 
   @ManyToOne(() => FacGame, (game) => game.players, {
     nullable: true,
-    onDelete: 'CASCADE',
+    onDelete: 'SET NULL',
   })
   @JoinColumn({
     name: 'game_id',
@@ -44,7 +44,7 @@ export class FacUsuarios {
   @Column({ nullable: true })
   cardId: number;
 
-  @OneToMany(() => BingoCard, (card) => card.usuario)
+  @OneToMany(() => BingoCard, (card) => card.usuario, { cascade: false })
   bingoCards: BingoCard[];
 
   @Column({

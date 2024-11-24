@@ -22,7 +22,10 @@ export class FacGame {
   @UpdateDateColumn()
   end_time: Date;
 
-  @OneToMany(() => FacUsuarios, (usuario) => usuario.game)
+  @OneToMany(() => FacUsuarios, (usuario) => usuario.game, {
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
   players: FacUsuarios[];
 
   @OneToMany(() => BingoCard, (card) => card.game)

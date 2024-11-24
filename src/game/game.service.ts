@@ -68,7 +68,7 @@ export class GameService {
     return game;
   }
 
-  // Finalizar el juego (esta eliminando a todos los usuarios asociados al juego)❔
+  // Finalizar el juego ✅
   async endGame(gameId: number): Promise<string> {
     const game = await this.gameRepository.findOne({
       where: { id: gameId },
