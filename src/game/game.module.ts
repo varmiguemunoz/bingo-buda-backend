@@ -8,6 +8,7 @@ import { FacGameState } from 'src/entities/fac-gamestate.entity';
 import { FacBall } from 'src/entities/fac-ball.entity';
 import { FacUsuarios } from 'src/entities/fac-usuarios.entity';
 import { BingoCard } from 'src/entities/dim-bingo.entity';
+import { DimRooms } from 'src/entities/dim-rooms.entity';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { BingoCard } from 'src/entities/dim-bingo.entity';
       FacBall,
       FacUsuarios,
       BingoCard,
+      DimRooms,
     ]),
   ],
   providers: [GameService],

@@ -7,6 +7,7 @@ import { FacGameState } from 'src/entities/fac-gamestate.entity';
 import { FacBall } from 'src/entities/fac-ball.entity';
 import { BingoCard } from 'src/entities/dim-bingo.entity';
 import { FacUsuarios } from 'src/entities/fac-usuarios.entity';
+import { DimRooms } from 'src/entities/dim-rooms.entity';
 
 @Injectable()
 export class GameService {
@@ -25,6 +26,9 @@ export class GameService {
 
     @InjectRepository(FacUsuarios)
     private readonly usuarioRepository: Repository<FacUsuarios>,
+
+    @InjectRepository(DimRooms)
+    private readonly roomRepository: Repository<DimRooms>,
   ) {}
 
   // Crear un nuevo juego ✅
@@ -46,26 +50,38 @@ export class GameService {
   async startGame(gameId: number): Promise<FacGame> {
     const game = await this.gameRepository.findOne({
       where: { id: gameId },
-      relations: ['players', 'bingoCards', 'balls', 'states'],
+      relations: ['players', 'bingoCards', 'balls', 'states', 'rooms'],
     });
 
     if (!game)
       throw new HttpException('Juego no encontrado', HttpStatus.NOT_FOUND);
 
+    const room = new DimRooms();
+    room.game = game;
+    const savedRoom = await this.roomRepository.save(room);
+
+    game.rooms = [...(game.rooms || []), savedRoom];
     game.start_time = new Date();
+
     await this.gameRepository.save(game);
 
     const initialState = new FacGameState();
     initialState.status = 'en curso';
     initialState.game = game;
+
     await this.gameStateRepository.save(initialState);
 
     await this.assignBingoCardsToPlayers(game);
     await this.generateBalls(game);
 
-    this.scheduleGameDeletion(game.id, 300000);
+    this.scheduleGameDeletion(game.id, 600000);
 
-    return game;
+    const updatedGame = await this.gameRepository.findOne({
+      where: { id: gameId },
+      relations: ['players', 'bingoCards', 'balls', 'states', 'rooms'],
+    });
+
+    return updatedGame;
   }
 
   // Finalizar el juego ✅
@@ -137,7 +153,7 @@ export class GameService {
   // Obtener todos los juegos ✅
   async getAllGames(): Promise<FacGame[]> {
     return await this.gameRepository.find({
-      relations: ['players', 'bingoCards', 'balls', 'states'],
+      relations: ['players', 'bingoCards', 'balls', 'states', 'rooms'],
       order: { start_time: 'ASC' },
     });
   }
