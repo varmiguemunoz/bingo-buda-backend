@@ -17,7 +17,7 @@ export class FacGame {
   @PrimaryGeneratedColumn({ primaryKeyConstraintName: 'game_pkey' })
   id: number;
 
-  @Column('simple-array', { nullable: true, default: [] })
+  @Column('simple-array', { nullable: true })
   drawnBalls: number[];
 
   @Column({ type: 'int', default: 75 })

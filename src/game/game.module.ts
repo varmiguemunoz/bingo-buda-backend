@@ -9,11 +9,11 @@ import { FacBall } from 'src/entities/fac-ball.entity';
 import { FacUsuarios } from 'src/entities/fac-usuarios.entity';
 import { BingoCard } from 'src/entities/dim-bingo.entity';
 import { DimRooms } from 'src/entities/dim-rooms.entity';
+import { WebsocketGateway } from 'src/websockets/websocket.gateway';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
-      FacUsuarios,
       FacGame,
       FacGameState,
       FacBall,
@@ -22,7 +22,7 @@ import { DimRooms } from 'src/entities/dim-rooms.entity';
       DimRooms,
     ]),
   ],
-  providers: [GameService],
+  providers: [GameService, WebsocketGateway],
   controllers: [GameController],
 })
 export class GameModule {}

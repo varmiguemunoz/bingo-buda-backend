@@ -8,6 +8,7 @@ import { FacBall } from 'src/entities/fac-ball.entity';
 import { BingoCard } from 'src/entities/dim-bingo.entity';
 import { FacUsuarios } from 'src/entities/fac-usuarios.entity';
 import { DimRooms } from 'src/entities/dim-rooms.entity';
+import { WebsocketGateway } from 'src/websockets/websocket.gateway';
 
 @Injectable()
 export class GameService {
@@ -29,6 +30,8 @@ export class GameService {
 
     @InjectRepository(DimRooms)
     private readonly roomRepository: Repository<DimRooms>,
+
+    private websocketService: WebsocketGateway,
   ) {}
 
   // Crear un nuevo juego ✅
@@ -42,6 +45,8 @@ export class GameService {
     await this.gameStateRepository.save(initialState);
 
     this.scheduleGameDeletion(savedGame.id, 300000);
+
+    this.websocketService.emitEvent('GameCreated', savedGame);
 
     return savedGame;
   }
@@ -82,6 +87,18 @@ export class GameService {
     });
 
     return updatedGame;
+  }
+
+  // Obtener las balotas de un juego ✅
+  async getBingoBalls(gameId: number): Promise<number[]> {
+    const game = await this.gameRepository.findOne({
+      where: { id: gameId },
+    });
+
+    if (!game)
+      throw new HttpException('Juego no encontrado', HttpStatus.NOT_FOUND);
+
+    return game.drawnBalls;
   }
 
   // Finalizar el juego ✅
