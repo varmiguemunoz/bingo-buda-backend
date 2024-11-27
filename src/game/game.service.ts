@@ -37,6 +37,7 @@ export class GameService {
   // Crear un nuevo juego ✅
   async createGame(): Promise<FacGame> {
     const game = new FacGame();
+    game.players = [];
     const savedGame = await this.gameRepository.save(game);
 
     const initialState = new FacGameState();
@@ -85,6 +86,8 @@ export class GameService {
       where: { id: gameId },
       relations: ['players', 'bingoCards', 'balls', 'states', 'rooms'],
     });
+
+    this.websocketService.emitEvent('game-started', updatedGame);
 
     return updatedGame;
   }
@@ -146,6 +149,8 @@ export class GameService {
     user.game = game;
 
     await this.usuarioRepository.save(user);
+
+    this.websocketService.emitEvent('game-joined', { gameId });
 
     return await this.gameRepository.findOne({
       where: { id: gameId },
@@ -339,6 +344,8 @@ export class GameService {
     game.drawnBalls = [...game.drawnBalls, drawnBall.number];
     await this.gameRepository.save(game);
 
+    this.websocketService.emitEvent('ball-drawn', drawnBall);
+
     return drawnBall;
   }
 
@@ -346,13 +353,13 @@ export class GameService {
   async checkBingo(gameId: number, userId: number): Promise<boolean> {
     const game = await this.gameRepository.findOne({
       where: { id: gameId },
-      relations: ['bingoCards'],
+      relations: ['bingoCards', 'bingoCards.usuario', 'players'],
     });
     if (!game)
       throw new HttpException('Juego no encontrado', HttpStatus.NOT_FOUND);
 
     const userBingoCard = game.bingoCards.find(
-      (card) => card.usuario.id === userId,
+      (card) => card.usuario?.id === userId,
     );
 
     if (!userBingoCard)
@@ -364,7 +371,15 @@ export class GameService {
     const hasBingo = this.validateBingo(userBingoCard, game.drawnBalls);
 
     if (hasBingo) {
+      await this.removeAllUsersFromGame(game);
+
+      this.websocketService.emitEvent('game-winner', { userId });
+    } else {
       await this.removeUserFromGame(game, userBingoCard);
+
+      this.websocketService.emitEvent('not-bingo', {
+        url: 'http://localhost:5173/home/game',
+      });
     }
 
     return hasBingo;
@@ -387,8 +402,33 @@ export class GameService {
     }
   }
 
+  private async removeAllUsersFromGame(game: FacGame): Promise<void> {
+    await this.bingoCardRepository.delete({ game: { id: game.id } });
+
+    game.players = [];
+    await this.gameRepository.save(game);
+  }
+
   private validateBingo(bingoCard: BingoCard, drawnBalls: number[]): boolean {
-    const cardNumbers = bingoCard.numbers;
+    if (!bingoCard || !bingoCard.numbers) {
+      throw new HttpException(
+        'Los números de la tarjeta son inválidos',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    if (!drawnBalls || drawnBalls.length === 0) {
+      throw new HttpException(
+        'Las bolas sorteadas son inválidas',
+        HttpStatus.BAD_REQUEST,
+      );
+    }
+
+    const cardNumbers = bingoCard.numbers.filter(
+      (num) => num !== null && num !== undefined,
+    );
+
+    console.log('cardNumbers', cardNumbers);
 
     const matrix = [];
     for (let i = 0; i < 5; i++) {
